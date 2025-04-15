@@ -10,7 +10,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
 
-class ApplicationStreamApiCallUseCase(private val baseUrl: String) {
+class ApplicationStreamService(private val baseUrl: String) {
     private val client = OkHttpClient()
 
     // Parse the data in the buffer and return the list of extracted objects and what is left in the buffer
