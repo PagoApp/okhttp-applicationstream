@@ -9,6 +9,7 @@ A Kotlin library that processes server-sent events or streaming HTTP responses i
 - Handle incomplete JSON objects across chunks
 - Return parsed objects as a Kotlin Flow
 - Built with OkHttp, Gson, and Kotlin Coroutines
+- Support for both GET and POST requests
 
 ## Installation
 
@@ -26,8 +27,17 @@ dependencies {
 // Create an instance with your base URL
 val service = ApplicationStreamService("https://api.example.com")
 
-// Get a flow of typed objects from a streaming endpoint
-val dataFlow: Flow<MyDataType> = service.get("stream/endpoint", MyDataType::class.java)
+// GET request: Get a flow of typed objects from a streaming endpoint
+val responseType = object : TypeToken<MyDataType>() {}
+val dataFlow: Flow<MyDataType> = service.get("stream/endpoint", responseType)
+
+// POST request: Send data and get a flow of typed objects from a streaming endpoint
+val requestBody = MyRequestType(param1 = "value", param2 = 123)
+val postFlow: Flow<MyResponseType> = service.post(
+    "stream/endpoint", 
+    requestBody, 
+    object : TypeToken<MyResponseType>() {}
+)
 
 // Process the flow in a coroutine scope
 lifecycleScope.launch {

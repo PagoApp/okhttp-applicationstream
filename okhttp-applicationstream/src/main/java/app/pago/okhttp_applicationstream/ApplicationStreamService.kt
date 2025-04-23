@@ -2,12 +2,15 @@ package app.pago.okhttp_applicationstream
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
 class ApplicationStreamService(private val baseUrl: String) {
@@ -17,7 +20,7 @@ class ApplicationStreamService(private val baseUrl: String) {
     // if there was an incomplete object in there
     private fun <T> parseDataInBuffer(
         stringBuffer: String,
-        dataType: Class<T>
+        dataType: TypeToken<T>
     ): Pair<String, List<T>> {
         val objects: MutableList<T> = mutableListOf()
 
@@ -44,16 +47,35 @@ class ApplicationStreamService(private val baseUrl: String) {
         }
     }
 
-    fun <T> get(path: String, responseType: Class<T>): Flow<T> {
+    fun <T> get(path: String, responseType: TypeToken<T>): Flow<T> {
         val request = Request.Builder()
             .url("$baseUrl/$path")
             .build()
 
+        return performRequest(request, responseType = responseType)
+    }
+
+    fun <B : Any, R> post(path: String, body: B, responseType: TypeToken<R>): Flow<R> {
+        val requestBody = Gson()
+            .toJson(body)
+            .toRequestBody(
+                contentType = "application/json".toMediaType()
+            )
+
+        val request = Request.Builder()
+            .url("$baseUrl/$path")
+            .method("POST", body = requestBody)
+            .build()
+
+        return performRequest(request, responseType = responseType)
+    }
+
+    private fun <T> performRequest(request: Request, responseType: TypeToken<T>): Flow<T> {
         return channelFlow {
             withContext(Dispatchers.IO) {
                 val response = client.newCall(request).execute()
                 if (!response.isSuccessful) {
-                    println("Unexpected code $response for $baseUrl/$path")
+                    println("Unexpected code $response for ${request.url}")
                 }
 
                 val source = response.body?.source()
@@ -76,7 +98,7 @@ class ApplicationStreamService(private val baseUrl: String) {
 
                     }
                 } catch (e: IOException) {
-                   println("Stream ended or errored: ${e.message} for $baseUrl/$path")
+                    println("Stream ended or errored: ${e.message} for ${request.url}")
                 }
             }
         }
