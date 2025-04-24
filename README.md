@@ -17,7 +17,7 @@ Add the library to your project's dependencies:
 
 ```kotlin
 dependencies {
-    implementation("app.pago:okhttp-applicationstream:1.0.0")
+    implementation("app.pago:okhttp-applicationstream:1.1.0")
 }
 ```
 
