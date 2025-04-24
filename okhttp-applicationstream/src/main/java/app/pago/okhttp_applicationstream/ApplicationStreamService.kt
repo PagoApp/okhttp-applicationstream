@@ -7,14 +7,27 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.withContext
+import okhttp3.Interceptor
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 
-class ApplicationStreamService(private val baseUrl: String) {
-    private val client = OkHttpClient()
+class ApplicationStreamService(
+    private val baseUrl: String,
+    interceptors: List<Interceptor> = emptyList()
+) {
+    private val client: OkHttpClient
+
+    init {
+        val builder = OkHttpClient.Builder()
+        interceptors.forEach { interceptor ->
+            builder.addInterceptor(interceptor)
+        }
+
+        client = builder.build()
+    }
 
     // Parse the data in the buffer and return the list of extracted objects and what is left in the buffer
     // if there was an incomplete object in there
