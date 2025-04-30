@@ -16,19 +16,8 @@ import java.io.IOException
 
 class ApplicationStreamService(
     private val baseUrl: String,
-    interceptors: List<Interceptor> = emptyList()
+    private val client: OkHttpClient = OkHttpClient(),
 ) {
-    private val client: OkHttpClient
-
-    init {
-        val builder = OkHttpClient.Builder()
-        interceptors.forEach { interceptor ->
-            builder.addInterceptor(interceptor)
-        }
-
-        client = builder.build()
-    }
-
     // Parse the data in the buffer and return the list of extracted objects and what is left in the buffer
     // if there was an incomplete object in there
     private fun <T> parseDataInBuffer(
