@@ -12,22 +12,35 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.Buffer
 import java.io.IOException
+import java.util.concurrent.TimeUnit
 
-class ApplicationStreamService(
-    private val baseUrl: String,
-    interceptors: List<Interceptor> = emptyList()
-) {
-    private val client: OkHttpClient
-
-    init {
-        val builder = OkHttpClient.Builder()
-        interceptors.forEach { interceptor ->
-            builder.addInterceptor(interceptor)
-        }
-
-        client = builder.build()
+data class ApplicationStreamServiceConfig(
+    val baseUrl: String,
+    val client: OkHttpClient,
+    val readBufferSize: Int = DEFAULT_BUFFER_SIZE
+){
+    companion object{
+        const val DEFAULT_BUFFER_SIZE = 1024
     }
+}
+class ApplicationStreamService(
+    private val config: ApplicationStreamServiceConfig
+) {
+//    init {
+//        val builder = OkHttpClient.Builder()
+//        builder.readTimeout(10, TimeUnit.HOURS)
+//        builder.writeTimeout(10, TimeUnit.HOURS)
+//        builder.callTimeout(10, TimeUnit.HOURS)
+//        builder.connectTimeout(10, TimeUnit.HOURS)
+//
+//        interceptors.forEach { interceptor ->
+//            builder.addInterceptor(interceptor)
+//        }
+//
+//        client = builder.build()
+//    }
 
     // Parse the data in the buffer and return the list of extracted objects and what is left in the buffer
     // if there was an incomplete object in there
@@ -62,7 +75,7 @@ class ApplicationStreamService(
 
     fun <T> get(path: String, responseType: TypeToken<T>): Flow<T> {
         val request = Request.Builder()
-            .url("$baseUrl/$path")
+            .url("${config.baseUrl}/$path")
             .build()
 
         return performRequest(request, responseType = responseType)
@@ -76,7 +89,7 @@ class ApplicationStreamService(
             )
 
         val request = Request.Builder()
-            .url("$baseUrl/$path")
+            .url("${config.baseUrl}/$path")
             .method("POST", body = requestBody)
             .build()
 
@@ -86,7 +99,7 @@ class ApplicationStreamService(
     private fun <T> performRequest(request: Request, responseType: TypeToken<T>): Flow<T> {
         return channelFlow {
             withContext(Dispatchers.IO) {
-                val response = client.newCall(request).execute()
+                val response = config.client.newCall(request).execute()
                 if (!response.isSuccessful) {
                     println("Unexpected code $response for ${request.url}")
                 }
@@ -99,8 +112,9 @@ class ApplicationStreamService(
 
                 try {
                     while (!source!!.exhausted()) {
-                        val chunk = source.readUtf8()
-                        stringBuffer += chunk
+                        val sync = Buffer()
+                        source.read(sync, config.readBufferSize.toLong())
+                        stringBuffer += sync.readUtf8()
 
                         val (remainingBuffer, objects) = parseDataInBuffer(
                             stringBuffer,
