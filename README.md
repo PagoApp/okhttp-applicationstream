@@ -10,6 +10,7 @@ A Kotlin library that processes server-sent events or streaming HTTP responses i
 - Return parsed objects as a Kotlin Flow
 - Built with OkHttp, Gson, and Kotlin Coroutines
 - Support for both GET and POST requests
+- Configurable OkHttpClient and buffer size
 
 ## Installation
 
@@ -22,6 +23,8 @@ dependencies {
 ```
 
 ## Usage
+
+### Basic Usage
 
 ```kotlin
 // Create an instance with your base URL
@@ -45,6 +48,30 @@ lifecycleScope.launch {
         // Process each data object as it arrives
     }
 }
+```
+
+### Advanced Configuration
+
+You can customize the service with additional configuration options:
+
+```kotlin
+// Create a custom OkHttpClient
+val okHttpClient = OkHttpClient.Builder()
+    .readTimeout(30, TimeUnit.MINUTES)
+    .writeTimeout(30, TimeUnit.MINUTES)
+    .callTimeout(30, TimeUnit.MINUTES)
+    .connectTimeout(30, TimeUnit.MINUTES)
+    .addInterceptor(yourCustomInterceptor)
+    .build()
+
+// Configure the service with custom options
+val config = ApplicationStreamServiceConfig(
+    baseUrl = "https://api.example.com",
+    client = okHttpClient,
+    readBufferSize = 2048 // Default is 1024
+)
+
+val service = ApplicationStreamService(config)
 ```
 
 ## Requirements
